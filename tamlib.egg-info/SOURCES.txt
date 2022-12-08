@@ -1,8 +1,0 @@
-README.md
-setup.cfg
-setup.py
-tamlib.egg-info/PKG-INFO
-tamlib.egg-info/SOURCES.txt
-tamlib.egg-info/dependency_links.txt
-tamlib.egg-info/requires.txt
-tamlib.egg-info/top_level.txt
