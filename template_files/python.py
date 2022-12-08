@@ -5,7 +5,7 @@ import os
 import rospy
 from action_msgs.msg import BuriAction
 from hoge_msgs.msg import Fuga, Hoge, Piyo
-from node_template import Node
+from tamlib.node_template import Node
 
 
 class TemplateClass(Node):
