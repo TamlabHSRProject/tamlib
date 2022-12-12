@@ -72,7 +72,7 @@ class CvBridge:
             img_msg (CompressedImage): CompressedImageメッセージ
             header_size (int): ヘッダーサイズ．Defaults to 12.
 
-        Raises:
+        Raises:peg.decode_header(in_file.read())
             Exception: メッセージの型が'compressedDepth'でない場合
             Exception: メッセージのヘッダーサイズが定義と異なる場合
             Exception: '16UC1'または'32FC1'以外でエンコードされているメッセージの場合
