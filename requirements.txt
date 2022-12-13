@@ -4,3 +4,4 @@ message_filters
 numpy
 addict
 pyyaml
+open3d
