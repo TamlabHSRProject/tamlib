@@ -108,7 +108,7 @@ class Transform:
         time=0.0,
         timeout=1.0,
     ) -> Optional[Pose]:
-        """_summary_
+        """オフセット付きの座標変換を行う
 
         Args:
             target_frame (str): 変換後の座標系名．
