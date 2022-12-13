@@ -6,7 +6,9 @@ import numpy as np
 import open3d as o3d
 import rospy
 import sensor_msgs.point_cloud2 as pc2
+from geometry_msgs.msg import Pose
 from open3d.geometry import PointCloud as PCD
+from scipy.spatial.transform import Rotation
 from sensor_msgs.msg import CameraInfo, PointCloud2, PointField
 from std_msgs.msg import Header
 
@@ -171,3 +173,21 @@ class Open3D:
         pcd_ptf.points = o3d.utility.Vector3dVector(points[pass_through_filter])
         pcd_ptf.colors = o3d.utility.Vector3dVector(colors[pass_through_filter])
         return pcd_ptf
+
+    def transform(self, pcd: PCD, pose: Pose) -> PCD:
+        pcd_rot = copy.deepcopy(pcd)
+        q = np.array(
+            [
+                pose.orientation.x,
+                pose.orientation.y,
+                pose.orientation.z,
+                pose.orientation.w,
+            ]
+        )
+        rotation_matrix = Rotation.from_quat(q)
+        T = np.eye(4)
+        T[:3, :3] = rotation_matrix.as_matrix()
+        T[0, 3] = pose.position.x
+        T[1, 3] = pose.position.y
+        T[2, 3] = pose.position.z
+        return pcd_rot.transform(T)
