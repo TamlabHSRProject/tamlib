@@ -71,7 +71,7 @@ class Open3D:
             has_color (bool, optional): 変換したポイントクラウドに色を付けるかどうか．Defaults to True.
 
         Returns:
-            Optional[PCD]: Open3D形式のポイントクラウド．変換できない場合はNoneを返す．
+            Optional[PCD]: Open3D形式のポイントクラウド．変換できない場合，Noneを返す．
         """
         field_names = [field.name for field in pcd_msg.fields]
         cloud_data = list(
@@ -175,6 +175,15 @@ class Open3D:
         return pcd_ptf
 
     def transform(self, pcd: PCD, pose: Pose) -> PCD:
+        """ポイントクラウドの座標変換
+
+        Args:
+            pcd (PCD): Open3D形式のポイントクラウド．
+            pose (Pose): 座標変換行列．
+
+        Returns:
+            PCD: 座標変換後のOpen3D形式のポイントクラウド．
+        """
         pcd_rot = copy.deepcopy(pcd)
         q = np.array(
             [
@@ -192,10 +201,21 @@ class Open3D:
         T[2, 3] = pose.position.z
         return pcd_rot.transform(T)
 
-    def clustering(self, pcd: PCD, eps=0.01, min_points=10):
+    def clustering(self, pcd: PCD, eps=0.01, min_points=10) -> Optional[np.ndarray]:
+        """DBSCANによるクラスタリング
+
+        Args:
+            pcd (PCD): Open3D形式のポイントクラウド．
+            eps (float, optional): クラスタ内の隣接する点との距離. Defaults to 0.01.
+            min_points (int, optional): クラスタを形成するために必要な最小点数. Defaults to 10.
+
+        Returns:
+            Optional[np.ndarray]: ポイントクラウドに対応したクラスタのラベルリスト．-1はノイズを表す．
+                クラスタリングできない場合，Noneを返す．
+        """
         labels = np.array(
             pcd.cluster_dbscan(eps=eps, min_points=min_points, print_progress=False)
         )
         if labels.max() < 0:
-            return False
+            return None
         return labels
