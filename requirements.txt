@@ -4,4 +4,5 @@ message_filters
 numpy
 addict
 pyyaml
-open3d
+open3d==0.16.0
+scipy
