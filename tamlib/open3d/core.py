@@ -7,7 +7,7 @@ import open3d as o3d
 import rospy
 import sensor_msgs.point_cloud2 as pc2
 from open3d.geometry import PointCloud as PCD
-from sensor_msgs.msg import PointCloud2, PointField
+from sensor_msgs.msg import CameraInfo, PointCloud2, PointField
 from std_msgs.msg import Header
 
 _FIELDS_XYZ = [
@@ -121,6 +121,21 @@ class Open3D:
             )
             cloud_data = np.c_[points, colors]
         return pc2.create_cloud(header, fields, cloud_data)
+
+    def depth_to_pcd(self, depth: np.ndarray, camera_info: CameraInfo) -> PCD:
+        intrinsics = o3d.camera.PinholeCameraIntrinsic()
+        intrinsics.set_intrinsics(
+            width=camera_info.width,
+            height=camera_info.height,
+            fx=camera_info.K[0],
+            fy=camera_info.K[4],
+            cx=camera_info.K[2],
+            cy=camera_info.K[5],
+        )
+        pcd = o3d.geometry.PointCloud.create_from_depth_image(
+            o3d.geometry.Image(depth), intrinsics
+        )
+        return pcd
 
     def pass_through_filter(
         self,
