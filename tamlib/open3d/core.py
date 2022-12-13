@@ -191,3 +191,11 @@ class Open3D:
         T[1, 3] = pose.position.y
         T[2, 3] = pose.position.z
         return pcd_rot.transform(T)
+
+    def clustering(self, pcd: PCD, eps=0.01, min_points=10):
+        labels = np.array(
+            pcd.cluster_dbscan(eps=eps, min_points=min_points, print_progress=False)
+        )
+        if labels.max() < 0:
+            return False
+        return labels
