@@ -1,4 +1,5 @@
 import copy
+import statistics
 from ctypes import POINTER, c_float, c_uint32, cast, pointer
 from typing import List, Optional, Union
 
@@ -219,3 +220,16 @@ class Open3D:
         if labels.max() < 0:
             return None
         return labels
+
+    def extract_max_cluster(self, pcd: PCD, labels: np.ndarray) -> PCD:
+        """最大クラスタの抽出
+
+        Args:
+            pcd (PCD): Open3D形式のポイントクラウド．
+            labels (np.ndarray): クラスタリング結果のラベルリスト．
+
+        Returns:
+            PCD: 抽出後のOpen3D形式のポイントクラウド．
+        """
+        indices = np.where(labels == statistics.mode(labels))[0]
+        return pcd.select_by_index(indices)
