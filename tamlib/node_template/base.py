@@ -30,7 +30,8 @@ class Node(NodeABC):
         self.action["client"] = InterfaceDict()
 
     def delete(self):
-        ...
+        for sub in self.sub.values():
+            sub.unregister()
 
     def logdebug(self, message):
         rospy.logdebug(f"[{self.node_name}]: {message}")
