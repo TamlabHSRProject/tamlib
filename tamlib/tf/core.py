@@ -9,10 +9,13 @@ class Transform:
     def __init__(self) -> None:
         self.node_name = rospy.get_name()
 
-        self.static_broadcaster = tf2_ros.StaticTransformBroadcaster()
-        self.broadcaster = tf2_ros.TransformBroadcaster()
-        self.buffer = tf2_ros.Buffer()
-        self.listener = tf2_ros.TransformListener(self.buffer)
+        self._static_broadcaster = tf2_ros.StaticTransformBroadcaster()
+        self._broadcaster = tf2_ros.TransformBroadcaster()
+        self._buffer = tf2_ros.Buffer()
+        self._listener = tf2_ros.TransformListener(self._buffer)
+
+        # Initialize dummy
+        self.get_pose("base_link", "base_footprint")
 
     def _create_transform_stamped(
         self, target_frame: str, source_frame: str, pose: Pose
@@ -46,7 +49,7 @@ class Transform:
             pose (Pose): 基準座標系からの相対座標．
         """
         transform = self._create_transform_stamped(target_frame, source_frame, pose)
-        self.static_broadcaster.sendTransform(transform)
+        self._static_broadcaster.sendTransform(transform)
 
     def send_transform(self, target_frame: str, source_frame: str, pose: Pose) -> None:
         """/tfを配信する
@@ -57,7 +60,7 @@ class Transform:
             pose (Pose): 基準座標系からの相対座標．
         """
         transform = self._create_transform_stamped(target_frame, source_frame, pose)
-        self.broadcaster.sendTransform(transform)
+        self._broadcaster.sendTransform(transform)
 
     def get_pose(
         self,
@@ -78,7 +81,7 @@ class Transform:
             Optional[Pose]: 変換後の座標．タイムアウトの場合，None．
         """
         try:
-            transform = self.buffer.lookup_transform(
+            transform = self._buffer.lookup_transform(
                 target_frame,
                 source_frame,
                 rospy.Time(time),
@@ -116,11 +119,37 @@ class Transform:
             buffer_frame (str): バッファーの座標系名．
             offset (Pose): オフセット座標．
             time (float, optional): 座標変換する特定の時間. 0で最新． Defaults to 0.0.
-            timeout (float, optional): タイムアウト. Defaults to 1.0.
+            timeout (float, optional): タイムアウト．負の場合一回のみ実行. Defaults to 1.0.
 
         Returns:
             Optional[Pose]: 変換後の座標．タイムアウトの場合，None．
         """
         self.send_transform(buffer_frame, source_frame, offset)
-        pose = self.get_pose(target_frame, buffer_frame, time, timeout)
+
+        start_time = rospy.Time.now()
+        current_time = rospy.Time.now()
+        while not rospy.is_shutdown():
+            try:
+                transform = self._buffer.lookup_transform(
+                    target_frame, source_frame, rospy.Time(time)
+                )
+                break
+            except (
+                tf2_ros.LookupException,
+                tf2_ros.ConnectivityException,
+                tf2_ros.ExtrapolationException,
+            ):
+                if timeout > 0:
+                    current_time = rospy.Time.now()
+                    if current_time - start_time > rospy.Duration(timeout):
+                        rospy.logwarn(f"[{self.node_name}]: Transform TIMEOUT.")
+                        return None
+                    continue
+                else:
+                    return None
+
+        pose = Pose(
+            position=transform.transform.translation,
+            orientation=transform.transform.rotation.x,
+        )
         return pose
