@@ -1,8 +1,10 @@
 from typing import Optional
 
+import numpy as np
 import rospy
+import tf
 import tf2_ros
-from geometry_msgs.msg import Pose, TransformStamped
+from geometry_msgs.msg import Point, Pose, Quaternion, TransformStamped
 
 
 class Transform:
@@ -13,9 +15,6 @@ class Transform:
         self._broadcaster = tf2_ros.TransformBroadcaster()
         self._buffer = tf2_ros.Buffer()
         self._listener = tf2_ros.TransformListener(self._buffer)
-
-        # Initialize dummy
-        self.get_pose("base_link", "base_footprint")
 
     def _create_transform_stamped(
         self, target_frame: str, source_frame: str, pose: Pose
@@ -98,7 +97,7 @@ class Transform:
 
         pose = Pose(
             position=transform.transform.translation,
-            orientation=transform.transform.rotation.x,
+            orientation=transform.transform.rotation,
         )
         return pose
 
@@ -106,50 +105,50 @@ class Transform:
         self,
         target_frame: str,
         source_frame: str,
-        buffer_frame: str,
         offset: Pose,
         time=0.0,
         timeout=1.0,
+        buffer_frame: Optional[str] = None,
     ) -> Optional[Pose]:
         """オフセット付きの座標変換を行う
 
         Args:
             target_frame (str): 変換後の座標系名．
             source_frame (str): 変換前の座標系名．
-            buffer_frame (str): バッファーの座標系名．
             offset (Pose): オフセット座標．
             time (float, optional): 座標変換する特定の時間. 0で最新． Defaults to 0.0.
             timeout (float, optional): タイムアウト．負の場合一回のみ実行. Defaults to 1.0.
+            buffer_frame (str, optional): バッファーの座標系名．Defaults to None.
 
         Returns:
             Optional[Pose]: 変換後の座標．タイムアウトの場合，None．
         """
-        self.send_transform(buffer_frame, source_frame, offset)
+        t = self.get_pose(target_frame, source_frame, time, timeout)
+        if t is None:
+            return None
 
-        start_time = rospy.Time.now()
-        current_time = rospy.Time.now()
-        while not rospy.is_shutdown():
-            try:
-                transform = self._buffer.lookup_transform(
-                    target_frame, source_frame, rospy.Time(time)
-                )
-                break
-            except (
-                tf2_ros.LookupException,
-                tf2_ros.ConnectivityException,
-                tf2_ros.ExtrapolationException,
-            ):
-                if timeout > 0:
-                    current_time = rospy.Time.now()
-                    if current_time - start_time > rospy.Duration(timeout):
-                        rospy.logwarn(f"[{self.node_name}]: Transform TIMEOUT.")
-                        return None
-                    continue
-                else:
-                    return None
+        trans1 = (t.position.x, t.position.y, t.position.z)
+        rot1 = (t.orientation.x, t.orientation.y, t.orientation.z, t.orientation.w)
+        trans1_mat = tf.transformations.translation_matrix(trans1)
+        rot1_mat = tf.transformations.quaternion_matrix(rot1)
+        mat1 = np.dot(trans1_mat, rot1_mat)
 
-        pose = Pose(
-            position=transform.transform.translation,
-            orientation=transform.transform.rotation.x,
+        trans2 = (offset.position.x, offset.position.y, offset.position.z)
+        rot2 = (
+            offset.orientation.x,
+            offset.orientation.y,
+            offset.orientation.z,
+            offset.orientation.w,
         )
+        trans2_mat = tf.transformations.translation_matrix(trans2)
+        rot2_mat = tf.transformations.quaternion_matrix(rot2)
+        mat2 = np.dot(trans2_mat, rot2_mat)
+
+        mat3 = np.dot(mat1, mat2)
+        trans3 = tf.transformations.translation_from_matrix(mat3)
+        rot3 = tf.transformations.quaternion_from_matrix(mat3)
+
+        pose = Pose(Point(*trans3), Quaternion(*rot3))
+        if buffer_frame is not None:
+            self.send_transform(buffer_frame, target_frame, pose)
         return pose
