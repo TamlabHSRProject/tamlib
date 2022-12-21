@@ -14,29 +14,28 @@ class Node(NodeABC, Publisher, Subscriber, Action):
         Publisher.__init__(self)
         Subscriber.__init__(self)
         Action.__init__(self)
-        # self.update_ros_time = dict(init=rospy.Time.now())  # name:update time
 
         self.run_enable = rospy.get_param(self.node_name + "/run_enable", True)
         rospy.Service(self.node_name + "/start", Empty, self.srvf_start)
         rospy.Service(self.node_name + "/stop", Empty, self.srvf_stop)
 
-    def delete(self):
+    def delete(self) -> None:
         for sub in self.sub.values():
             sub.unregister()
 
-    def logdebug(self, message):
+    def logdebug(self, message) -> None:
         rospy.logdebug(f"[{self.node_name}]: {message}")
 
-    def loginfo(self, message):
+    def loginfo(self, message) -> None:
         rospy.loginfo(f"[{self.node_name}]: {message}")
 
-    def logwarn(self, message):
+    def logwarn(self, message) -> None:
         rospy.logwarn(f"[{self.node_name}]: {message}")
 
-    def logerr(self, message):
+    def logerr(self, message) -> None:
         rospy.logerr(f"[{self.node_name}]: {message}")
 
-    def logfatal(self, message):
+    def logfatal(self, message) -> None:
         rospy.logfatal(f"[{self.node_name}]: {message}")
 
     def set_update_ros_time(self, name: Optional[str] = None) -> None:
