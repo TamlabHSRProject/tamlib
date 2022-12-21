@@ -1,33 +1,24 @@
 import inspect
-from types import MethodType
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Optional
 
-import actionlib
-import message_filters
 import rospy
 from std_srvs.srv import Empty, EmptyResponse
 
+from ..rosutils import Action, Publisher, Subscriber
 from .base_abc import NodeABC
-from .ifdict import InterfaceDict
 
 
-class Node(NodeABC):
+class Node(NodeABC, Publisher, Subscriber, Action):
     def __init__(self) -> None:
-        rospy.sleep(0.01)
-        self.node_name = rospy.get_name()
-
-        self.update_ros_time = dict(init=rospy.Time.now())  # name:update time
+        super().__init__()
+        Publisher.__init__(self)
+        Subscriber.__init__(self)
+        Action.__init__(self)
+        # self.update_ros_time = dict(init=rospy.Time.now())  # name:update time
 
         self.run_enable = rospy.get_param(self.node_name + "/run_enable", True)
-
         rospy.Service(self.node_name + "/start", Empty, self.srvf_start)
         rospy.Service(self.node_name + "/stop", Empty, self.srvf_stop)
-
-        self.pub = InterfaceDict()
-        self.sub = InterfaceDict()
-        self.action = InterfaceDict()
-        self.action["server"] = InterfaceDict()
-        self.action["client"] = InterfaceDict()
 
     def delete(self):
         for sub in self.sub.values():
@@ -85,7 +76,7 @@ class Node(NodeABC):
         self.set_update_ros_time(name="stop")
         return EmptyResponse()
 
-    def pub_register(self, name: str, topic: str, msg_type: Any, queue_size=1):
+    def pub_register(self, name: str, topic: str, msg_type: Any, queue_size=10) -> None:
         """Publisherを登録する
 
         Args:
@@ -94,68 +85,7 @@ class Node(NodeABC):
             msg_type (Any): メッセージの型
             queue_size (int, optional): キューサイズ. Defaults to 1.
         """
-        self.pub[name] = rospy.Publisher(topic, msg_type, queue_size=queue_size)
-
-    def _make_callback(
-        self,
-        name: str,
-        execute_func: Callable,
-    ) -> MethodType:
-        """動的にcallback関数を作成する
-
-        Args:
-            name (str): self.subf_{name}でcallback関数が作成される．変数はself.{name}で取り出せる．
-            execute_func (Callable): コールバック関数内で実行する関数．
-
-        Returns:
-            MethodType: Subscriber method
-        """
-        func_name = f"subf_{name}"
-        exec_func_name = f"exec_{func_name}"
-
-        def callback(self, msg):
-            if hasattr(self, exec_func_name):
-                getattr(self, exec_func_name)(msg)
-            else:
-                setattr(self, name, msg)
-            self.set_update_ros_time(func_name)
-
-        if execute_func is not None:
-            setattr(self, exec_func_name, execute_func)
-        setattr(self, func_name, callback.__get__(self, self.__class__))
-        return getattr(self, func_name)
-
-    def _make_sync_callback(
-        self,
-        name: str,
-        var_names: Union[Tuple[str], List[str]],
-        execute_func: Callable,
-    ) -> MethodType:
-        """動的にcallback関数を作成する
-
-        Args:
-            name (str): self.subf_{name}でcallback関数が作成される．変数はself.{name}で取り出せる．
-            var_names (tuple, list): 登録する変数名リスト．
-            execute_func (Callable): コールバック関数内で実行する関数．
-
-        Returns:
-            MethodType: Subscriber method
-        """
-        func_name = f"subf_{name}"
-        exec_func_name = f"exec_{func_name}"
-
-        def sync_callback(self, *msgs):
-            if hasattr(self, exec_func_name):
-                getattr(self, exec_func_name)(*msgs)
-            else:
-                for i, msg in enumerate(msgs):
-                    setattr(self, var_names[i], msg)
-            self.set_update_ros_time(func_name)
-
-        if execute_func is not None:
-            setattr(self, exec_func_name, execute_func)
-        setattr(self, func_name, sync_callback.__get__(self, self.__class__))
-        return getattr(self, func_name)
+        Publisher.register(self, name, topic, msg_type, queue_size)
 
     def sub_register(
         self,
@@ -177,18 +107,7 @@ class Node(NodeABC):
         Raises:
             AttributeError: callback関数用の変数が定義されていない場合．
         """
-        if not hasattr(self, name):
-            raise AttributeError(
-                f"'{self.__class__.__name__}' object has no attribute '{name}'."
-            )
-        msg_type = type(getattr(self, name))
-        new_cb = self._make_callback(name, execute_func)
-        self.sub[name] = rospy.Subscriber(
-            topic,
-            msg_type,
-            new_cb,
-            queue_size=queue_size,
-        )
+        Subscriber.register(self, name, topic, queue_size, execute_func)
 
     def sync_sub_register(
         self,
@@ -214,22 +133,9 @@ class Node(NodeABC):
             execute_func (Optional[Callable], optional):
                 コールバック関数内で実行する関数．Defaults to None.
         """
-        interfaces = []
-        var_names = []
-        for var_name, topic in topics.items():
-            interfaces.append(
-                message_filters.Subscriber(
-                    topic,
-                    type(getattr(self, var_name)),
-                )
-            )
-            var_names.append(var_name)
-
-        synchronizer = message_filters.ApproximateTimeSynchronizer(
-            interfaces, queue_size, delay, allow_headerless=allow_headerless
+        Subscriber.sync_register(
+            self, name, topics, queue_size, delay, allow_headerless, execute_func
         )
-        new_cb = self._make_sync_callback(name, var_names, execute_func)
-        self.sub[name] = synchronizer.registerCallback(new_cb)
 
     def wait_for_message(
         self,
@@ -248,23 +154,7 @@ class Node(NodeABC):
         Returns:
             Any: 取得したメッセージ．タイムアウトの場合，False．
         """
-        func_name = f"subf_{topic_name}"
-        if not hasattr(self, func_name):
-            raise AttributeError(f"'self' has no attribute '{func_name}'.")
-
-        start_ros_time = rospy.Time.now()
-        prev_ros_time = rospy.Time.now()
-        while not rospy.is_shutdown():
-            if timeout is not None:
-                if prev_ros_time - start_ros_time > rospy.Duration(secs=timeout):
-                    self.logwarn(f"wait for '{topic_name}' is timeout!")
-                    return False
-                prev_ros_time = rospy.Time.now()
-
-            if func_name not in self.update_ros_time.keys():
-                continue
-            if start_ros_time >= self.update_ros_time[func_name]:
-                return getattr(self, topic_name)
+        return Subscriber.wait_for_message(self, topic_name, timeout)
 
     def action_server_register(
         self,
@@ -282,12 +172,9 @@ class Node(NodeABC):
             execute_cb (Optional[Callable], optional):
                 クライアントからゴールが投げられたときに実行する関数．Defaults to None.
         """
-        self.action.server[name] = actionlib.SimpleActionServer(
-            ns, action_type, execute_cb, auto_start=False
-        )
-        self.action.server[name].start()
+        Action.server_register(self, name, ns, action_type, execute_cb)
 
-    def action_client_register(
+    def client_register(
         self,
         name: str,
         ns: str,
@@ -309,14 +196,4 @@ class Node(NodeABC):
         Raises:
             TimeoutError: 指定したtimeout秒が経過した場合．
         """
-        self.action.client[name] = actionlib.SimpleActionClient(
-            ns,
-            action_type,
-        )
-        if wait_for_server:
-            _timeout = rospy.Duration(timeout) if timeout > 0 else rospy.Duration()
-            result = self.action.client[name].wait_for_server(_timeout)
-            if result is False:
-                raise TimeoutError(
-                    f"ActionServer: '{ns}' is timeout ({timeout} secs elapsed).",
-                )
+        Action.client_register(self, name, ns, action_type, wait_for_server, timeout)
