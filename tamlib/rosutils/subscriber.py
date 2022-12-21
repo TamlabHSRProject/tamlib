@@ -105,6 +105,7 @@ class Subscriber:
         name: str,
         topic: str,
         queue_size=10,
+        callback_func: Optional[Callable] = None,
         execute_func: Optional[Callable] = None,
     ) -> None:
         """Subscriberを登録する
@@ -114,6 +115,8 @@ class Subscriber:
                 また，self.subf_{name}でcallback関数が作成される．変数はself.{name}で取り出せる．
             topic (str): Subscribeするtopic名
             queue_size (int, optional): キューサイズ. Defaults to 10.
+            callback_func (Optional[Callable], optional):
+                コールバック関数．Defaults to None.
             execute_func (Optional[Callable], optional):
                 コールバック関数内で実行する関数．Defaults to None.
 
@@ -125,11 +128,12 @@ class Subscriber:
                 f"'{self.__class__.__name__}' object has no attribute '{name}'."
             )
         msg_type = type(getattr(self, name))
-        new_cb = self._make_callback(name, execute_func)
+        if callback_func is None:
+            callback_func = self._make_callback(name, execute_func)
         self._sub[name] = rospy.Subscriber(
             topic,
             msg_type,
-            new_cb,
+            callback_func,
             queue_size=queue_size,
         )
 
@@ -140,6 +144,7 @@ class Subscriber:
         queue_size=10,
         delay=0.1,
         allow_headerless=False,
+        callback_func: Optional[Callable] = None,
         execute_func: Optional[Callable] = None,
     ) -> None:
         """複数トピック同期のSubscriberを登録する
@@ -154,6 +159,8 @@ class Subscriber:
             delay (float, optional): 許容する同期ズレ [sec]. Defaults to 0.1.
             allow_headerless (bool, optional): Trueの場合，headerがなくても同期する（非推奨）.
                 Defaults to False.
+            callback_func (Optional[Callable], optional):
+                コールバック関数．Defaults to None.
             execute_func (Optional[Callable], optional):
                 コールバック関数内で実行する関数．Defaults to None.
         """
@@ -171,8 +178,9 @@ class Subscriber:
         synchronizer = message_filters.ApproximateTimeSynchronizer(
             interfaces, queue_size, delay, allow_headerless=allow_headerless
         )
-        new_cb = self._make_sync_callback(name, var_names, execute_func)
-        self.sub[name] = synchronizer.registerCallback(new_cb)
+        if callback_func is None:
+            callback_func = self._make_sync_callback(name, var_names, execute_func)
+        self.sub[name] = synchronizer.registerCallback(callback_func)
 
     def wait_for_message(
         self,
