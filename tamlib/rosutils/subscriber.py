@@ -61,7 +61,7 @@ class Subscriber:
                 getattr(self, exec_func_name)(msg)
             else:
                 setattr(self, name, msg)
-            self.set_update_ros_time(func_name)
+            self.set_update_ros_time(name)
 
         if execute_func is not None:
             setattr(self, exec_func_name, execute_func)
@@ -93,7 +93,7 @@ class Subscriber:
             else:
                 for i, msg in enumerate(msgs):
                     setattr(self, var_names[i], msg)
-            self.set_update_ros_time(func_name)
+            self.set_update_ros_time(name)
 
         if execute_func is not None:
             setattr(self, exec_func_name, execute_func)
