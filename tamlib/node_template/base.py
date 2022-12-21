@@ -91,6 +91,7 @@ class Node(NodeABC, Publisher, Subscriber, Action):
         name: str,
         topic: str,
         queue_size=10,
+        callback_func: Optional[Callable] = None,
         execute_func: Optional[Callable] = None,
     ) -> None:
         """Subscriberを登録する
@@ -100,13 +101,15 @@ class Node(NodeABC, Publisher, Subscriber, Action):
                 また，self.subf_{name}でcallback関数が作成される．変数はself.{name}で取り出せる．
             topic (str): Subscribeするtopic名
             queue_size (int, optional): キューサイズ. Defaults to 10.
+            callback_func (Optional[Callable], optional):
+                コールバック関数．Defaults to None.
             execute_func (Optional[Callable], optional):
                 コールバック関数内で実行する関数．Defaults to None.
 
         Raises:
             AttributeError: callback関数用の変数が定義されていない場合．
         """
-        Subscriber.register(self, name, topic, queue_size, execute_func)
+        Subscriber.register(self, name, topic, queue_size, callback_func, execute_func)
 
     def sync_sub_register(
         self,
@@ -115,6 +118,7 @@ class Node(NodeABC, Publisher, Subscriber, Action):
         queue_size=10,
         delay=0.1,
         allow_headerless=False,
+        callback_func: Optional[Callable] = None,
         execute_func: Optional[Callable] = None,
     ) -> None:
         """複数トピック同期のSubscriberを登録する
@@ -129,11 +133,20 @@ class Node(NodeABC, Publisher, Subscriber, Action):
             delay (float, optional): 許容する同期ズレ [sec]. Defaults to 0.1.
             allow_headerless (bool, optional): Trueの場合，headerがなくても同期する（非推奨）.
                 Defaults to False.
+            callback_func (Optional[Callable], optional):
+                コールバック関数．Defaults to None.
             execute_func (Optional[Callable], optional):
                 コールバック関数内で実行する関数．Defaults to None.
         """
         Subscriber.sync_register(
-            self, name, topics, queue_size, delay, allow_headerless, execute_func
+            self,
+            name,
+            topics,
+            queue_size,
+            delay,
+            allow_headerless,
+            callback_func,
+            execute_func,
         )
 
     def wait_for_message(
