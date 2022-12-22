@@ -214,5 +214,5 @@ class Subscriber:
 
             if topic_name not in self.update_ros_time.keys():
                 continue
-            if start_ros_time >= self.update_ros_time[topic_name]:
+            if start_ros_time <= self.update_ros_time[topic_name]:
                 return getattr(self, topic_name)
