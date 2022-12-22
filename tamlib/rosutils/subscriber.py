@@ -199,9 +199,8 @@ class Subscriber:
         Returns:
             Any: 取得したメッセージ．タイムアウトの場合，False．
         """
-        func_name = f"subf_{topic_name}"
-        if not hasattr(self, func_name):
-            raise AttributeError(f"'self' has no attribute '{func_name}'.")
+        if not hasattr(self, topic_name):
+            raise AttributeError(f"'self' has no attribute '{topic_name}'.")
 
         start_ros_time = rospy.Time.now()
         prev_ros_time = rospy.Time.now()
@@ -213,7 +212,7 @@ class Subscriber:
                     return False
                 prev_ros_time = rospy.Time.now()
 
-            if func_name not in self.update_ros_time.keys():
+            if topic_name not in self.update_ros_time.keys():
                 continue
-            if start_ros_time >= self.update_ros_time[func_name]:
+            if start_ros_time >= self.update_ros_time[topic_name]:
                 return getattr(self, topic_name)
