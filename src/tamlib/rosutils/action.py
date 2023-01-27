@@ -3,7 +3,7 @@ from typing import Any, Callable, Optional, Union
 import actionlib
 import rospy
 
-from .ifdict import InterfaceDict
+from ..utils import InterfaceDict
 
 
 class Action:

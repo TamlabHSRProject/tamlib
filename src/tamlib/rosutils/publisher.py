@@ -2,7 +2,7 @@ from typing import Any
 
 import rospy
 
-from .ifdict import InterfaceDict
+from ..utils import InterfaceDict
 
 
 class Publisher:

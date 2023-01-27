@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import message_filters
 import rospy
 
-from .ifdict import InterfaceDict
+from ..utils import InterfaceDict
 
 
 class Subscriber:
@@ -57,11 +57,11 @@ class Subscriber:
         exec_func_name = f"exec_{func_name}"
 
         def callback(self, msg):
+            self.set_update_ros_time(name)
             if hasattr(self, exec_func_name):
                 getattr(self, exec_func_name)(msg)
             else:
                 setattr(self, name, msg)
-            self.set_update_ros_time(name)
 
         if execute_func is not None:
             setattr(self, exec_func_name, execute_func)
@@ -89,11 +89,13 @@ class Subscriber:
 
         def sync_callback(self, *msgs):
             if hasattr(self, exec_func_name):
+                for name in var_names:
+                    self.set_update_ros_time(name)
                 getattr(self, exec_func_name)(*msgs)
             else:
-                for i, msg in enumerate(msgs):
-                    setattr(self, var_names[i], msg)
-            self.set_update_ros_time(name)
+                for name, msg in zip(var_names, msgs):
+                    setattr(self, name, msg)
+                    self.set_update_ros_time(name)
 
         if execute_func is not None:
             setattr(self, exec_func_name, execute_func)
