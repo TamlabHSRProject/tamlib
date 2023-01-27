@@ -5,7 +5,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import message_filters
 import rospy
 
-from .ifdict import InterfaceDict
+from ..utils import InterfaceDict
 
 
 class Subscriber:

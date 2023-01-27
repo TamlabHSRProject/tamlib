@@ -2,10 +2,10 @@ from addict import Dict
 
 
 class InterfaceDict(Dict):
-    def __missing__(self, name):
+    def __missing__(self, name: str):
         raise KeyError(name)
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str):
         try:
             value = super().__getattr__(name)
         except KeyError:
