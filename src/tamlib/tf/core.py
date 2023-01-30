@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 import rospy
@@ -145,3 +145,15 @@ class Transform:
         if buffer_frame is not None:
             self.send_transform(buffer_frame, target_frame, result)
         return result
+
+    @staticmethod
+    def euler2quaternion(roll: float, pitch: float, yaw: float) -> Quaternion:
+        q = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
+        return Quaternion(*q)
+
+    @staticmethod
+    def quaternion2euler(quaternion: Quaternion) -> Tuple[float, float, float]:
+        roll, pitch, yaw = tf.transformations.euler_from_quaternion(
+            (quaternion.x, quaternion.y, quaternion.z, quaternion.w)
+        )
+        return (roll, pitch, yaw)
