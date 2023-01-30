@@ -148,11 +148,29 @@ class Transform:
 
     @staticmethod
     def euler2quaternion(roll: float, pitch: float, yaw: float) -> Quaternion:
+        """オイラーからクォータニオンへ変換
+
+        Args:
+            roll (float): Roll [rad]．
+            pitch (float): Pitch [rad]．
+            yaw (float): Yaw [rad]．
+
+        Returns:
+            Quaternion: 変換後のクォータニオン．
+        """
         q = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
         return Quaternion(*q)
 
     @staticmethod
     def quaternion2euler(quaternion: Quaternion) -> Tuple[float, float, float]:
+        """クォータニオンからオイラーへ変換
+
+        Args:
+            quaternion (Quaternion): クォータニオン．
+
+        Returns:
+            Tuple[float, float, float]: 変換後のRoll，Pitch，Yaw [rad]．
+        """
         roll, pitch, yaw = tf.transformations.euler_from_quaternion(
             (quaternion.x, quaternion.y, quaternion.z, quaternion.w)
         )
