@@ -4,13 +4,9 @@ import numpy as np
 import rospy
 from nav_msgs.msg import OccupancyGrid
 
-from ..rosutils.subscriber import Subscriber
 
-
-class Map(Subscriber):
+class Map:
     def __init__(self, map_topic="/rtabmap/grid_map") -> None:
-        super().__init__()
-
         self.map = rospy.wait_for_message(map_topic, OccupancyGrid)
 
     @property
