@@ -1,17 +1,18 @@
 import copy
 import statistics
 from ctypes import POINTER, c_float, c_uint32, cast, pointer
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 import numpy as np
 import open3d as o3d
 import rospy
 import sensor_msgs.point_cloud2 as pc2
 from geometry_msgs.msg import Pose
-from open3d.geometry import PointCloud as PCD
 from scipy.spatial.transform import Rotation
 from sensor_msgs.msg import CameraInfo, PointCloud2, PointField
 from std_msgs.msg import Header
+
+# from open3d.geometry import PointCloud as PCD # TODO: Error
 
 _FIELDS_XYZ = [
     PointField(name="x", offset=0, datatype=PointField.FLOAT32, count=1),
@@ -23,6 +24,8 @@ _FIELDS_XYZRGB = _FIELDS_XYZ + [
 ]
 _BIT_MOVE_16 = 2**16
 _BIT_MOVE_8 = 2**8
+
+PCD = Any  # エラー対策
 
 
 class Open3D:
