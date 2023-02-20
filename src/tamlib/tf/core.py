@@ -7,13 +7,69 @@ import tf2_ros
 from geometry_msgs.msg import Point, Pose, Quaternion, TransformStamped
 
 
-def pose_to_matrix(pose: Pose):
+def pose_to_matrix(pose: Pose) -> np.ndarray:
+    """Poseから行列に変換する
+
+    Args:
+        pose (Pose): 変換するPose．
+
+    Returns:
+        np.ndarray: 変換後の行列．
+    """
     p, q = pose.position, pose.orientation
     trans = (p.x, p.y, p.z)
     rot = (q.x, q.y, q.z, q.w)
     trans_mat = tf.transformations.translation_matrix(trans)
     rot_mat = tf.transformations.quaternion_matrix(rot)
     return np.dot(trans_mat, rot_mat)
+
+
+def transform_pose(pose: Pose, pose_T: Pose) -> Pose:
+    """座標変換
+
+    Args:
+        pose (Pose): 変換する行列．
+        pose_T (Pose): 変換行列．
+
+    Returns:
+        Pose: 変換された行列．
+    """
+    mat1 = pose_to_matrix(pose)
+    mat2 = pose_to_matrix(pose_T)
+    mat = np.dot(mat1, mat2)
+    trans = tf.transformations.translation_from_matrix(mat)
+    rot = tf.transformations.quaternion_from_matrix(mat)
+    return Pose(Point(*trans), Quaternion(*rot))
+
+
+def euler2quaternion(roll: float, pitch: float, yaw: float) -> Quaternion:
+    """オイラーからクォータニオンへ変換
+
+    Args:
+        roll (float): Roll [rad]．
+        pitch (float): Pitch [rad]．
+        yaw (float): Yaw [rad]．
+
+    Returns:
+        Quaternion: 変換後のクォータニオン．
+    """
+    q = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
+    return Quaternion(*q)
+
+
+def quaternion2euler(quaternion: Quaternion) -> Tuple[float, float, float]:
+    """クォータニオンからオイラーへ変換
+
+    Args:
+        quaternion (Quaternion): クォータニオン．
+
+    Returns:
+        Tuple[float, float, float]: 変換後のRoll，Pitch，Yaw [rad]．
+    """
+    roll, pitch, yaw = tf.transformations.euler_from_quaternion(
+        (quaternion.x, quaternion.y, quaternion.z, quaternion.w)
+    )
+    return (roll, pitch, yaw)
 
 
 class Transform:
@@ -135,43 +191,7 @@ class Transform:
         pose = self.get_pose(target_frame, source_frame, time, timeout)
         if pose is None:
             return None
-
-        mat1 = pose_to_matrix(pose)
-        mat2 = pose_to_matrix(offset)
-        mat = np.dot(mat1, mat2)
-        trans = tf.transformations.translation_from_matrix(mat)
-        rot = tf.transformations.quaternion_from_matrix(mat)
-        result = Pose(Point(*trans), Quaternion(*rot))
+        result = transform_pose(pose, offset)
         if buffer_frame is not None:
             self.send_transform(buffer_frame, target_frame, result)
         return result
-
-    @staticmethod
-    def euler2quaternion(roll: float, pitch: float, yaw: float) -> Quaternion:
-        """オイラーからクォータニオンへ変換
-
-        Args:
-            roll (float): Roll [rad]．
-            pitch (float): Pitch [rad]．
-            yaw (float): Yaw [rad]．
-
-        Returns:
-            Quaternion: 変換後のクォータニオン．
-        """
-        q = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
-        return Quaternion(*q)
-
-    @staticmethod
-    def quaternion2euler(quaternion: Quaternion) -> Tuple[float, float, float]:
-        """クォータニオンからオイラーへ変換
-
-        Args:
-            quaternion (Quaternion): クォータニオン．
-
-        Returns:
-            Tuple[float, float, float]: 変換後のRoll，Pitch，Yaw [rad]．
-        """
-        roll, pitch, yaw = tf.transformations.euler_from_quaternion(
-            (quaternion.x, quaternion.y, quaternion.z, quaternion.w)
-        )
-        return (roll, pitch, yaw)

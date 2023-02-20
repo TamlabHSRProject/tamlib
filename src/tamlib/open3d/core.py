@@ -169,13 +169,14 @@ class Open3D:
         """
         pcd_ptf = copy.deepcopy(pcd)
         points = np.ascontiguousarray(pcd_ptf.points)
-        colors = np.ascontiguousarray(pcd_ptf.colors)
         x_range = np.logical_and(points[:, 0] >= xmin, points[:, 0] <= xmax)
         y_range = np.logical_and(points[:, 1] >= ymin, points[:, 1] <= ymax)
         z_range = np.logical_and(points[:, 2] >= zmin, points[:, 2] <= zmax)
         pass_through_filter = np.logical_and(x_range, np.logical_and(y_range, z_range))
         pcd_ptf.points = o3d.utility.Vector3dVector(points[pass_through_filter])
-        pcd_ptf.colors = o3d.utility.Vector3dVector(colors[pass_through_filter])
+        if pcd_ptf.colors:
+            colors = np.ascontiguousarray(pcd_ptf.colors)
+            pcd_ptf.colors = o3d.utility.Vector3dVector(colors[pass_through_filter])
         return pcd_ptf
 
     def transform(self, pcd: PCD, pose: Pose) -> PCD:

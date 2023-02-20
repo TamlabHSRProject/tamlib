@@ -2,7 +2,7 @@ import inspect
 from typing import Any, Callable, Dict, Optional
 
 import rospy
-from std_srvs.srv import Empty, EmptyResponse
+from std_srvs.srv import Empty, EmptyResponse, SetBool, SetBoolResponse
 
 from ..rosutils import Action, Publisher, Subscriber
 from .base_abc import NodeABC
@@ -16,8 +16,7 @@ class Node(NodeABC, Publisher, Subscriber, Action):
         Action.__init__(self)
 
         self.run_enable = rospy.get_param(self.node_name + "/run_enable", True)
-        rospy.Service(self.node_name + "/start", Empty, self.srvf_start)
-        rospy.Service(self.node_name + "/stop", Empty, self.srvf_stop)
+        rospy.Service(self.node_name + "/run_enable", SetBool, self.set_run_enable)
 
     def delete(self) -> None:
         for sub in self.sub.values():
@@ -49,31 +48,24 @@ class Node(NodeABC, Publisher, Subscriber, Action):
             name = inspect.stack()[1].function
         self.update_ros_time[name] = rospy.Time.now()
 
-    def srvf_start(self, req: Empty) -> Empty:
-        """ノード開始用のサービス
+    def set_run_enable(self, req: SetBool) -> SetBoolResponse:
+        """ノード開始・停止用のサービス
 
         Args:
             req (Empty): 空．
 
         Returns:
-            Empty: 空．
+            SetBoolResponse: 空．
         """
-        self.run_enable = True
-        self.set_update_ros_time(name="start")
-        return EmptyResponse()
-
-    def srvf_stop(self, req: Empty) -> Empty:
-        """ノード停止用のサービス
-
-        Args:
-            req (Empty): 空．
-
-        Returns:
-            Empty: 空．
-        """
-        self.run_enable = False
-        self.set_update_ros_time(name="stop")
-        return EmptyResponse()
+        self.run_enable = req.data
+        res = SetBoolResponse(success=True)
+        if req.data:
+            res.message = "Start"
+            self.set_update_ros_time(name="start")
+        else:
+            res.message = "Stop"
+            self.set_update_ros_time(name="stop")
+        return res
 
     def pub_register(self, name: str, topic: str, msg_type: Any, queue_size=10) -> None:
         """Publisherを登録する
