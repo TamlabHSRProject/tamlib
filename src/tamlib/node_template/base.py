@@ -52,10 +52,10 @@ class Node(NodeABC, Publisher, Subscriber, Action):
         """ノード開始・停止用のサービス
 
         Args:
-            req (Empty): 空．
+            req (SetBool): data: Trueの場合「開始」，Falseの場合「停止」．
 
         Returns:
-            SetBoolResponse: 空．
+            SetBoolResponse
         """
         self.run_enable = req.data
         res = SetBoolResponse(success=True)
