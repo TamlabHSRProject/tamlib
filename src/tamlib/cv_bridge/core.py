@@ -86,7 +86,6 @@ class CvBridge:
             _type = _type.strip()
             if "compressedDepth" not in _type:
                 raise Exception("Compression type is not 'compressedDepth'.")
-            header_size = 12
             raw_data = img_msg.data[header_size:]
 
             depth_img_raw = cv2.imdecode(
@@ -147,6 +146,30 @@ class CvBridge:
         try:
             img_msg = self.bridge.cv2_to_compressed_imgmsg(cv_img, format)
             return img_msg
+        except CvBridgeError as e:
+            rospy.logwarn(f"[{self.node_name}]: {e}")
+            rospy.logwarn(f"[{self.node_name}]: CvBridge FAILURE")
+            return None
+
+    def depth_to_compressed_imgmsg(
+        self, cv_img: np.ndarray, format="png"
+    ) -> CompressedImage:
+        """cv2形式の画像をCompressedImageメッセージに変換する
+            16UC1のみ対応
+
+        Args:
+            cv_img (np.ndarray): cv2形式のDepth画像
+            format (str, optional): 圧縮フォーマット. Defaults to "png".
+                フォーマット: bmp, dib, jpeg, jpg, jpe, jp2, png, pbm, pgm, ppm, sr, ras, tiff, tif
+
+        Returns:
+            CompressedImage: CompressedImageメッセージ
+        """
+        try:
+            img_msg = self.bridge.cv2_to_compressed_imgmsg(cv_img, format)
+            img_msg.format = f"16UC1; compressedDepth {format}"
+            return img_msg
+
         except CvBridgeError as e:
             rospy.logwarn(f"[{self.node_name}]: {e}")
             rospy.logwarn(f"[{self.node_name}]: CvBridge FAILURE")
