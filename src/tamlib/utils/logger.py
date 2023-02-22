@@ -44,11 +44,17 @@ class Logger:
         """
         self._logger.add(path, level=loglevel)
 
+    def logtrace(self, message) -> None:
+        self._logger.opt(depth=1).trace(message)
+
     def logdebug(self, message) -> None:
         self._logger.opt(depth=1).debug(message)
 
     def loginfo(self, message: str) -> None:
         self._logger.opt(depth=1).info(message)
+        
+    def logsuccess(self, message) -> None:
+        self._logger.opt(depth=1).success(message)
 
     def logwarn(self, message: str) -> None:
         self._logger.opt(depth=1).warning(message)

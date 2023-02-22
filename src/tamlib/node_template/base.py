@@ -10,12 +10,12 @@ from .base_abc import NodeABC
 
 
 class Node(NodeABC, Publisher, Subscriber, Action, Logger):
-    def __init__(self) -> None:
+    def __init__(self, loglevel='INFO') -> None:
         super().__init__()
         Publisher.__init__(self)
         Subscriber.__init__(self)
         Action.__init__(self)
-        Logger.__init__(self)
+        Logger.__init__(self, loglevel=loglevel)
 
         self.run_enable = rospy.get_param(self.node_name + "/run_enable", True)
         rospy.Service(self.node_name + "/run_enable", SetBool, self.set_run_enable)
@@ -24,20 +24,6 @@ class Node(NodeABC, Publisher, Subscriber, Action, Logger):
         for sub in self.sub.values():
             sub.unregister()
 
-    # def logdebug(self, message) -> None:
-    #     rospy.logdebug(f"[{self.node_name}]: {message}")
-
-    # def loginfo(self, message) -> None:
-    #     rospy.loginfo(f"[{self.node_name}]: {message}")
-
-    # def logwarn(self, message) -> None:
-    #     rospy.logwarn(f"[{self.node_name}]: {message}")
-
-    # def logerr(self, message) -> None:
-    #     rospy.logerr(f"[{self.node_name}]: {message}")
-
-    # def logfatal(self, message) -> None:
-    #     rospy.logfatal(f"[{self.node_name}]: {message}")
 
     def set_update_ros_time(self, name: Optional[str] = None) -> None:
         """更新時間（ROS時間）をセットする
