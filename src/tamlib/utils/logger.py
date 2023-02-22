@@ -5,7 +5,7 @@ import copy
 
 class Logger:
     def __init__(self, logger_name=None, loglevel='INFO',
-                 format='<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | {extra[logger_name]} |<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>',) -> None:
+                 format='<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | {extra[logger_name]} |<light-cyan>{name}</light-cyan>:<light-cyan>{function}</light-cyan>:<light-cyan>{line}</light-cyan>: - <level>{message}</level>',) -> None:
         """Initialize function
 
         Parameters
