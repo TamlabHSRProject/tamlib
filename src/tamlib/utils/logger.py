@@ -5,7 +5,7 @@ import copy
 
 class Logger:
     def __init__(self, logger_name=None, loglevel='INFO',
-                 format='<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | {extra[logger_name]} |<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>',) -> None:
+                 format='<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | {extra[logger_name]} |<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>',) -> None:
         """Initialize function
 
         Parameters
@@ -24,6 +24,13 @@ class Logger:
         logger.remove()
         self._logger = copy.deepcopy(logger.bind(logger_name=self._logger_name))
         self._logger.add(sys.stdout, format=format, level=loglevel)
+        self._logger.level("TRACE", color="<white>")
+        self._logger.level("DEBUG", color="<blue><bold>")
+        self._logger.level("INFO", color="<cyan><bold>")
+        self._logger.level("SUCCESS", color="<green><bold>")
+        self._logger.level("WARNING", color="<yellow><bold>")
+        self._logger.level("ERROR", color="<red><bold>")
+        self._logger.level("CRITICAL", color="<RED><bold>")
 
     def start_dump_log(self, path: str, loglevel='DEBUG'):
         """function to start dump log to file
