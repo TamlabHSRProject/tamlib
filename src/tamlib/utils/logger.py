@@ -25,7 +25,7 @@ class Logger:
         self._logger = copy.deepcopy(logger.bind(logger_name=self._logger_name))
         self._logger.add(sys.stdout, format=format, level=loglevel)
 
-    def start_dump(self, path: str, loglevel='DEBUG'):
+    def start_dump_log(self, path: str, loglevel='DEBUG'):
         """function to start dump log to file
 
         Parameters
