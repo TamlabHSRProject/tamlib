@@ -8,6 +8,7 @@ import open3d as o3d
 import rospy
 import sensor_msgs.point_cloud2 as pc2
 from geometry_msgs.msg import Pose
+from scipy.optimize import curve_fit
 from scipy.spatial.transform import Rotation
 from sensor_msgs.msg import CameraInfo, PointCloud2, PointField
 from std_msgs.msg import Header
@@ -237,3 +238,37 @@ class Open3D:
         """
         indices = np.where(labels == statistics.mode(labels))[0]
         return pcd.select_by_index(indices)
+
+    @staticmethod
+    def _ellipse_func(x, a, b, h, k):
+        return (x[0] - h) ** 2 / a**2 + (x[1] - k) ** 2 / b**2 - 1
+
+    def ellipse_fitting_2d(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        """2D点群の多角形フィッティング
+
+        Args:
+            x (np.ndarray): x座標のリスト．
+            y (np.ndarray): y座標のリスト．
+
+        Returns:
+            np.ndarray: パラメータ．
+        """
+        p0 = [1, 1, np.mean(x), np.mean(y)]
+        params, _ = curve_fit(self._ellipse_func, (x, y), np.ones_like(x), p0=p0)
+        return params
+
+    def get_angle(self, x: np.ndarray, y: np.ndarray) -> float:
+        """xy平面での角度を算出
+
+        Args:
+            x (np.ndarray): x座標のリスト．
+            y (np.ndarray): y座標のリスト．
+
+        Returns:
+            float: 角度 [rad]．
+        """
+        params = self.ellipse_fitting_2d(x, y)
+        normal = np.array([params[0], params[1], -1])
+        normal /= np.linalg.norm(normal)
+        angle = np.arccos(np.abs(normal[2]))
+        return angle
