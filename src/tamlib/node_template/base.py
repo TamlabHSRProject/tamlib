@@ -24,20 +24,6 @@ class Node(NodeABC, Publisher, Subscriber, Action, Logger):
         for sub in self.sub.values():
             sub.unregister()
 
-    # def logdebug(self, message) -> None:
-    #     rospy.logdebug(f"[{self.node_name}]: {message}")
-
-    # def loginfo(self, message) -> None:
-    #     rospy.loginfo(f"[{self.node_name}]: {message}")
-
-    # def logwarn(self, message) -> None:
-    #     rospy.logwarn(f"[{self.node_name}]: {message}")
-
-    # def logerr(self, message) -> None:
-    #     rospy.logerr(f"[{self.node_name}]: {message}")
-
-    # def logfatal(self, message) -> None:
-    #     rospy.logfatal(f"[{self.node_name}]: {message}")
 
     def set_update_ros_time(self, name: Optional[str] = None) -> None:
         """更新時間（ROS時間）をセットする
