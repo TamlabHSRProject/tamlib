@@ -10,12 +10,12 @@ from .base_abc import NodeABC
 
 
 class Node(NodeABC, Publisher, Subscriber, Action, Logger):
-    def __init__(self) -> None:
+    def __init__(self, loglevel='INFO') -> None:
         super().__init__()
         Publisher.__init__(self)
         Subscriber.__init__(self)
         Action.__init__(self)
-        Logger.__init__(self)
+        Logger.__init__(self, loglevel=loglevel)
 
         self.run_enable = rospy.get_param(self.node_name + "/run_enable", True)
         rospy.Service(self.node_name + "/run_enable", SetBool, self.set_run_enable)
