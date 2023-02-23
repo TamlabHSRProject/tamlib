@@ -1,7 +1,7 @@
 import copy
 import statistics
 from ctypes import POINTER, c_float, c_uint32, cast, pointer
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 import open3d as o3d
@@ -253,11 +253,15 @@ class Open3D:
         Returns:
             np.ndarray: パラメータ．
         """
-        p0 = [1, 1, np.mean(x), np.mean(y)]
-        params, _ = curve_fit(self._ellipse_func, (x, y), np.ones_like(x), p0=p0)
+        # p0 = [1, 1, np.mean(x), np.mean(y)]
+        print(np.mean(x), np.mean(y))
+        p0 = [2, 1, 1, -1]
+        params, _ = curve_fit(
+            self._ellipse_func, np.array([x, y]), np.ones_like(x), p0=p0, maxfev=10000
+        )
         return params
 
-    def get_angle(self, x: np.ndarray, y: np.ndarray) -> float:
+    def get_angle(self, points: np.ndarray) -> float:
         """xy平面での角度を算出
 
         Args:
@@ -267,8 +271,28 @@ class Open3D:
         Returns:
             float: 角度 [rad]．
         """
-        params = self.ellipse_fitting_2d(x, y)
-        normal = np.array([params[0], params[1], -1])
-        normal /= np.linalg.norm(normal)
-        angle = np.arccos(np.abs(normal[2]))
+        points = points - np.mean([points], axis=1)
+        cov = np.cov(points, rowvar=False)
+        eigenvalues, eigenvectors = np.linalg.eig(cov)
+        max_eigenvector = eigenvectors[:, np.argmax(eigenvalues)]
+        angle = np.arctan2(max_eigenvector[1], max_eigenvector[0])
         return angle
+
+    def get_size_and_center(
+        self, pcd: PCD
+    ) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
+        """ポイントクラウドのサイズと中心座標を取得
+
+        Args:
+            pcd (PCD): ポイントクラウド．
+
+        Returns:
+            Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
+                width, length, height, center(x, y, z)
+        """
+        obbox = pcd.get_oriented_bounding_box()
+        width = min(obbox.extent[:2])
+        length = max(obbox.extent[:2])
+        height = obbox.extent[2]
+        center = obbox.center.copy()
+        return (width, length, height), center
