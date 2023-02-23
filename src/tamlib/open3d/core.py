@@ -239,28 +239,6 @@ class Open3D:
         indices = np.where(labels == statistics.mode(labels))[0]
         return pcd.select_by_index(indices)
 
-    @staticmethod
-    def _ellipse_func(x, a, b, h, k):
-        return (x[0] - h) ** 2 / a**2 + (x[1] - k) ** 2 / b**2 - 1
-
-    def ellipse_fitting_2d(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
-        """2D点群の多角形フィッティング
-
-        Args:
-            x (np.ndarray): x座標のリスト．
-            y (np.ndarray): y座標のリスト．
-
-        Returns:
-            np.ndarray: パラメータ．
-        """
-        # p0 = [1, 1, np.mean(x), np.mean(y)]
-        print(np.mean(x), np.mean(y))
-        p0 = [2, 1, 1, -1]
-        params, _ = curve_fit(
-            self._ellipse_func, np.array([x, y]), np.ones_like(x), p0=p0, maxfev=10000
-        )
-        return params
-
     def get_angle(self, points: np.ndarray) -> float:
         """xy平面での角度を算出
 
