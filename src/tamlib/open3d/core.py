@@ -1,13 +1,14 @@
 import copy
 import statistics
 from ctypes import POINTER, c_float, c_uint32, cast, pointer
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 import open3d as o3d
 import rospy
 import sensor_msgs.point_cloud2 as pc2
 from geometry_msgs.msg import Pose
+from scipy.optimize import curve_fit
 from scipy.spatial.transform import Rotation
 from sensor_msgs.msg import CameraInfo, PointCloud2, PointField
 from std_msgs.msg import Header
@@ -237,3 +238,61 @@ class Open3D:
         """
         indices = np.where(labels == statistics.mode(labels))[0]
         return pcd.select_by_index(indices)
+
+    @staticmethod
+    def _ellipse_func(x, a, b, h, k):
+        return (x[0] - h) ** 2 / a**2 + (x[1] - k) ** 2 / b**2 - 1
+
+    def ellipse_fitting_2d(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        """2D点群の多角形フィッティング
+
+        Args:
+            x (np.ndarray): x座標のリスト．
+            y (np.ndarray): y座標のリスト．
+
+        Returns:
+            np.ndarray: パラメータ．
+        """
+        # p0 = [1, 1, np.mean(x), np.mean(y)]
+        print(np.mean(x), np.mean(y))
+        p0 = [2, 1, 1, -1]
+        params, _ = curve_fit(
+            self._ellipse_func, np.array([x, y]), np.ones_like(x), p0=p0, maxfev=10000
+        )
+        return params
+
+    def get_angle(self, points: np.ndarray) -> float:
+        """xy平面での角度を算出
+
+        Args:
+            x (np.ndarray): x座標のリスト．
+            y (np.ndarray): y座標のリスト．
+
+        Returns:
+            float: 角度 [rad]．
+        """
+        points = points - np.mean([points], axis=1)
+        cov = np.cov(points, rowvar=False)
+        eigenvalues, eigenvectors = np.linalg.eig(cov)
+        max_eigenvector = eigenvectors[:, np.argmax(eigenvalues)]
+        angle = np.arctan2(max_eigenvector[1], max_eigenvector[0])
+        return angle
+
+    def get_size_and_center(
+        self, pcd: PCD
+    ) -> Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
+        """ポイントクラウドのサイズと中心座標を取得
+
+        Args:
+            pcd (PCD): ポイントクラウド．
+
+        Returns:
+            Tuple[Tuple[float, float, float], Tuple[float, float, float]]:
+                width, length, height, center(x, y, z)
+        """
+        obbox = pcd.get_oriented_bounding_box()
+        width = min(obbox.extent[:2])
+        length = max(obbox.extent[:2])
+        height = obbox.extent[2]
+        center = obbox.center.copy()
+        return (width, length, height), center
