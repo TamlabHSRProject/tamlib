@@ -94,11 +94,11 @@ class Open3D:
                 rgb = [self._rgbfloat_to_tuple(rgb) for *_, rgb in cloud_data]
             else:
                 rgb = [self._rgbuint32_to_tuple(rgb) for *_, rgb in cloud_data]
-            pcd.points = o3d.utility.Vector3dVector(np.array(xyz))
-            pcd.colors = o3d.utility.Vector3dVector(np.array(rgb))
+            pcd.points = o3d.utility.Vector3dVector(np.ascontiguousarray(xyz))
+            pcd.colors = o3d.utility.Vector3dVector(np.ascontiguousarray(rgb))
         else:
             xyz = [(x, y, z) for x, y, z in cloud_data]
-            pcd.points = o3d.utility.Vector3dVector(np.array(xyz))
+            pcd.points = o3d.utility.Vector3dVector(np.ascontiguousarray(xyz))
         return pcd
 
     def pcd_to_pcd2msg(self, pcd: PCD, frame_id: str, has_color=True) -> PointCloud2:
@@ -191,7 +191,7 @@ class Open3D:
             PCD: 座標変換後のOpen3D形式のポイントクラウド．
         """
         pcd_rot = copy.deepcopy(pcd)
-        q = np.array(
+        q = np.ascontiguousarray(
             [
                 pose.orientation.x,
                 pose.orientation.y,
@@ -219,7 +219,7 @@ class Open3D:
             Optional[np.ndarray]: ポイントクラウドに対応したクラスタのラベルリスト．-1はノイズを表す．
                 クラスタリングできない場合，Noneを返す．
         """
-        labels = np.array(
+        labels = np.ascontiguousarray(
             pcd.cluster_dbscan(eps=eps, min_points=min_points, print_progress=False)
         )
         if labels.max() < 0:
