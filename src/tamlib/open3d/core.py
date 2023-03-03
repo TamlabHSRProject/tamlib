@@ -79,6 +79,8 @@ class Open3D:
             Optional[PCD]: Open3D形式のポイントクラウド．変換できない場合，Noneを返す．
         """
         field_names = [field.name for field in pcd_msg.fields]
+        if "rgb" in field_names and has_color is False:
+            field_names.remove("rgb")
         cloud_data = list(
             pc2.read_points(pcd_msg, skip_nans=True, field_names=field_names)
         )
@@ -96,6 +98,9 @@ class Open3D:
                 rgb = [self._rgbuint32_to_tuple(rgb) for *_, rgb in cloud_data]
             pcd.points = o3d.utility.Vector3dVector(np.ascontiguousarray(xyz))
             pcd.colors = o3d.utility.Vector3dVector(np.ascontiguousarray(rgb))
+        if "rgb" in field_names and has_color is False:
+            xyz = [(x, y, z) for x, y, z, _ in cloud_data]
+            pcd.points = o3d.utility.Vector3dVector(np.ascontiguousarray(xyz))
         else:
             xyz = [(x, y, z) for x, y, z in cloud_data]
             pcd.points = o3d.utility.Vector3dVector(np.ascontiguousarray(xyz))
