@@ -244,21 +244,19 @@ class Open3D:
         indices = np.where(labels == statistics.mode(labels))[0]
         return pcd.select_by_index(indices)
 
-    def get_angle(self, points: np.ndarray) -> float:
+    def get_angle(self, pcd: PCD) -> float:
         """xy平面での角度を算出
 
         Args:
-            x (np.ndarray): x座標のリスト．
-            y (np.ndarray): y座標のリスト．
+            pcd (PCD): ポイントクラウド．
 
         Returns:
             float: 角度 [rad]．
         """
-        points = points - np.mean([points], axis=1)
-        cov = np.cov(points, rowvar=False)
-        eigenvalues, eigenvectors = np.linalg.eig(cov)
-        max_eigenvector = eigenvectors[:, np.argmax(eigenvalues)]
-        angle = np.arctan2(max_eigenvector[1], max_eigenvector[0])
+        obbox = pcd.get_oriented_bounding_box()
+        rotation_matrix = obbox.R
+        # -90 ~ 90 deg
+        angle = np.arctan([rotation_matrix[1, 0] / rotation_matrix[0, 0]])[0]
         return angle
 
     def get_size_and_center(
