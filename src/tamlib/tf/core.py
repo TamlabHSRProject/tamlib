@@ -1,9 +1,14 @@
 from typing import Optional, Tuple
 
 import numpy as np
-import rospy
-import tf
+# import rospy
+# import tf
+import rclpy
 import tf2_ros
+from rclpy.node import Node
+from rclpy.time import Time
+from rclpy.duration import Duration
+import tf_transformations as tft
 from geometry_msgs.msg import Point, Pose, Quaternion, TransformStamped
 
 
@@ -19,8 +24,8 @@ def pose_to_matrix(pose: Pose) -> np.ndarray:
     p, q = pose.position, pose.orientation
     trans = (p.x, p.y, p.z)
     rot = (q.x, q.y, q.z, q.w)
-    trans_mat = tf.transformations.translation_matrix(trans)
-    rot_mat = tf.transformations.quaternion_matrix(rot)
+    trans_mat = tft.translation_matrix(trans)
+    rot_mat = tft.quaternion_matrix(rot)
     return np.dot(trans_mat, rot_mat)
 
 
@@ -37,9 +42,12 @@ def transform_pose(pose: Pose, pose_T: Pose) -> Pose:
     mat1 = pose_to_matrix(pose)
     mat2 = pose_to_matrix(pose_T)
     mat = np.dot(mat1, mat2)
-    trans = tf.transformations.translation_from_matrix(mat)
-    rot = tf.transformations.quaternion_from_matrix(mat)
-    return Pose(Point(*trans), Quaternion(*rot))
+    trans = tft.translation_from_matrix(mat)
+    rot = tft.quaternion_from_matrix(mat)
+    try:
+        return Pose(position=Point(x=trans[0], y=trans[1], z=trans[2]), orientation=Quaternion(x=rot[0], y=rot[1], z=rot[2], w=rot[3]))
+    except Exception as e:
+        return Pose(position=Point(x=0, y=0, z=0), orientation=Quaternion(x=0, y=0, z=0, w=1))
 
 
 def euler2quaternion(roll: float, pitch: float, yaw: float) -> Quaternion:
@@ -53,7 +61,7 @@ def euler2quaternion(roll: float, pitch: float, yaw: float) -> Quaternion:
     Returns:
         Quaternion: 変換後のクォータニオン．
     """
-    q = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
+    q = tft.quaternion_from_euler(roll, pitch, yaw)
     return Quaternion(*q)
 
 
@@ -66,20 +74,22 @@ def quaternion2euler(quaternion: Quaternion) -> Tuple[float, float, float]:
     Returns:
         Tuple[float, float, float]: 変換後のRoll，Pitch，Yaw [rad]．
     """
-    roll, pitch, yaw = tf.transformations.euler_from_quaternion(
+    roll, pitch, yaw = tft.euler_from_quaternion(
         (quaternion.x, quaternion.y, quaternion.z, quaternion.w)
     )
     return (roll, pitch, yaw)
 
 
-class Transform:
-    def __init__(self) -> None:
-        self.node_name = rospy.get_name()
+class Transform():
+    def __init__(self, node: Node) -> None:
 
-        self._static_broadcaster = tf2_ros.StaticTransformBroadcaster()
-        self._broadcaster = tf2_ros.TransformBroadcaster()
+        self.node_name = node.get_name()
+        self.parent_node = node
+
+        self._static_broadcaster = tf2_ros.StaticTransformBroadcaster(node)
+        self._broadcaster = tf2_ros.TransformBroadcaster(node)
         self._buffer = tf2_ros.Buffer()
-        self._listener = tf2_ros.TransformListener(self._buffer)
+        self._listener = tf2_ros.TransformListener(self._buffer, node)
 
     def _create_transform_stamped(
         self, target_frame: str, source_frame: str, pose: Pose
@@ -95,7 +105,7 @@ class Transform:
             TransformStamped: 作成されたメッセージ．
         """
         transform = TransformStamped()
-        transform.header.stamp = rospy.Time.now()
+        transform.header.stamp = self.parent_node.get_clock().now().to_msg()
         transform.header.frame_id = source_frame
         transform.child_frame_id = target_frame
         transform.transform.translation = pose.position
@@ -148,20 +158,23 @@ class Transform:
             transform = self._buffer.lookup_transform(
                 target_frame,
                 source_frame,
-                rospy.Time(time),
-                rospy.Duration(timeout),
+                Time(seconds=time),
+                timeout=Duration(seconds=timeout)
+                # rospy.Time(time),
+                # rospy.Duration(timeout),
             )
         except (
             tf2_ros.LookupException,
             tf2_ros.ConnectivityException,
             tf2_ros.ExtrapolationException,
         ) as e:
-            rospy.logwarn(f"[{self.node_name}]: {e}")
-            rospy.logwarn(f"[{self.node_name}]: Transform FAILURE.")
+            self.parent_node.get_logger().warn(f"[{self.node_name}]: {e}")
+            self.parent_node.get_logger().warn(f"[{self.node_name}]: Transform FAILURE.")
             return None
 
+        position = Point(x=transform.transform.translation.x, y=transform.transform.translation.y, z=transform.transform.translation.z)
         pose = Pose(
-            position=transform.transform.translation,
+            position=position,
             orientation=transform.transform.rotation,
         )
         return pose

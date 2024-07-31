@@ -1,10 +1,12 @@
 import sys
 from loguru import logger
-import rospy
+# import rospy
+from rclpy.node import Node
 import copy
 
-class Logger:
-    def __init__(self, logger_name=None, loglevel='INFO',
+
+class Logger():
+    def __init__(self, logger_name, loglevel='INFO',
                  format='<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | {extra[logger_name]} |<light-cyan>{name}</light-cyan>:<light-cyan>{function}</light-cyan>:<light-cyan>{line}</light-cyan>: - <level>{message}</level>',) -> None:
         """Initialize function
 
@@ -17,10 +19,11 @@ class Logger:
         format : str, optional
             log format, by default '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | {extra[logger_name]} |<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>'
         """
-        if logger_name is None:
-            self._logger_name = rospy.get_name()
-        else:
-            self._logger_name = logger_name 
+        # if logger_name is None:
+        #     # self._logger_name = node.get_name()
+        #     self._logger_name = "logger_" + str(random.randrange(10000, 99999))
+        # else:
+        self._logger_name = logger_name
         logger.remove()
         self._logger = copy.deepcopy(logger.bind(logger_name=self._logger_name))
         self._logger.add(sys.stdout, format=format, level=loglevel)
@@ -52,7 +55,7 @@ class Logger:
 
     def loginfo(self, message: str) -> None:
         self._logger.opt(depth=1).info(message)
-        
+
     def logsuccess(self, message) -> None:
         self._logger.opt(depth=1).success(message)
 
